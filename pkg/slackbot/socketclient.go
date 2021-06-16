@@ -31,7 +31,7 @@ func (s *SlackBot) SocketListener() {
 			case slackevents.CallbackEvent:
 				s.FireCallbackEvent(eventsAPIEvent)
 			case slackevents.URLVerification:
-				 log.Warnln("Url Verification event received")
+				log.Warnln("Url Verification event received")
 			case slackevents.AppRateLimited:
 				// AppRateLimited indicates your app's event subscriptions are being rate limited
 				log.Warnln("AppRateLimited event received")
@@ -68,7 +68,6 @@ func (s *SlackBot) SocketListener() {
 	}
 
 }
-
 
 func (s *SlackBot) StartSocketListener() {
 	go s.SocketListener()

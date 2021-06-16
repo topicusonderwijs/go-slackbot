@@ -17,13 +17,12 @@ type SlackBot struct {
 		appToken   string
 	}
 
-	registeredCommands map[string]CommandFunc
+	registeredCommands  map[string]CommandFunc
 	registeredCallbacks map[slack.InteractionType]map[string]InteractionCallbackFunc
-	registeredEvents map[string]CallbackEventFunc
+	registeredEvents    map[string]CallbackEventFunc
 
 	Api          *slack.Client
 	socketClient *socketmode.Client
-
 }
 
 func NewSlackBot(slackSignSecret, slackBotToken, slackAppToken string) *SlackBot {
@@ -50,7 +49,6 @@ func (s *SlackBot) SetHTTPHandleFunctions(http *http.ServeMux) {
 	http.HandleFunc("/slack/commands", s.CommandsHandler)
 
 }
-
 
 type CommandFunc func(command slack.SlashCommand) slack.Message
 type InteractionCallbackFunc func(callback slack.InteractionCallback) slack.Message
@@ -103,7 +101,6 @@ func (s *SlackBot) RegisterCallbackEvent(event string, handler CallbackEventFunc
 
 }
 
-
 /** SlackBot Methods **/
 
 func (s *SlackBot) Setup() {
@@ -142,7 +139,7 @@ func (s *SlackBot) FireCommand(command slack.SlashCommand) slack.Message {
 
 }
 
-func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.InteractionCallback ) slack.Message  {
+func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.InteractionCallback) slack.Message {
 
 	var payload slack.Message
 
@@ -185,17 +182,17 @@ func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.Interaction
 	}
 
 	/*
-	jout, err := json.MarshalIndent(interactionCallback, "", "    ")
-	if err != nil {
-		log.Error(err)
-	}
-	log.Debugf("%s", jout)
+		jout, err := json.MarshalIndent(interactionCallback, "", "    ")
+		if err != nil {
+			log.Error(err)
+		}
+		log.Debugf("%s", jout)
 	*/
 	return payload
 
 }
 
-func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent ) {
+func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent) {
 
 	innerEvent := eventsAPIEvent.InnerEvent
 

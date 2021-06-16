@@ -16,7 +16,6 @@ func (s *SlackBot) DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-
 func (s *SlackBot) VerifySignature(w http.ResponseWriter, r *http.Request) (err error) {
 
 	verifier, err := slack.NewSecretsVerifier(r.Header, s.config.signSecret)
@@ -47,7 +46,7 @@ func (s *SlackBot) VerifySignature(w http.ResponseWriter, r *http.Request) (err 
 
 func (s *SlackBot) ActionsHandler(w http.ResponseWriter, r *http.Request) {
 
-	if err := s.VerifySignature(w,r); err != nil {
+	if err := s.VerifySignature(w, r); err != nil {
 		log.Errorf("Fail to verify SigningSecret: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -67,7 +66,7 @@ func (s *SlackBot) ActionsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *SlackBot) CommandsHandler(w http.ResponseWriter, r *http.Request) {
 
-	if err := s.VerifySignature(w,r); err != nil {
+	if err := s.VerifySignature(w, r); err != nil {
 		log.Errorf("Fail to verify SigningSecret: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -83,13 +82,13 @@ func (s *SlackBot) CommandsHandler(w http.ResponseWriter, r *http.Request) {
 
 	payload := s.FireCommand(command)
 
-	s.renderJSON(w,r,payload)
+	s.renderJSON(w, r, payload)
 
 }
 
 func (s *SlackBot) EventsHandler(w http.ResponseWriter, r *http.Request) {
 
-	if err := s.VerifySignature(w,r); err != nil {
+	if err := s.VerifySignature(w, r); err != nil {
 		log.Errorf("Fail to verify SigningSecret: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -103,7 +102,7 @@ func (s *SlackBot) EventsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Could not parse action response JSON: %v", err)
 	}
 
-	switch payload["type"]	{
+	switch payload["type"] {
 	case "url_verification":
 		w.WriteHeader(200)
 		w.Write([]byte(payload["challenge"].(string)))
@@ -133,9 +132,8 @@ func (s *SlackBot) renderJSON(w http.ResponseWriter, r *http.Request, object int
 
 }
 
-
 func (s *SlackBot) renderError(w http.ResponseWriter, r *http.Request, err error) {
-	b := []byte(fmt.Sprintf("There was an error: %s", err ))
+	b := []byte(fmt.Sprintf("There was an error: %s", err))
 
 	debug := true
 

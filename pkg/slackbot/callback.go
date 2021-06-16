@@ -10,11 +10,9 @@ import (
 )
 
 type Callback struct {
-
 	Id      uuid.UUID
 	Created time.Time
 	Storage map[string]interface{}
-
 }
 
 func (s *Callback) Get(key string) (value interface{}, err error) {
@@ -57,7 +55,6 @@ func (s *Callback) GetInt(key string) int {
 
 }
 
-
 func (s *Callback) Set(key string, value interface{}) {
 
 	s.Storage[key] = value
@@ -68,9 +65,9 @@ func (s *Callback) AddUUID() uuid.UUID {
 
 	newId := uuid.New()
 
- 	log.Debugln("Added ", newId.String(), "for callback with id", s.Id.String())
+	log.Debugln("Added ", newId.String(), "for callback with id", s.Id.String())
 
-   	CallbackStorage[newId.String()] = s
+	CallbackStorage[newId.String()] = s
 
 	return newId
 
@@ -88,7 +85,7 @@ func NewCallback() *Callback {
 	sess := Callback{
 		Id:      uuid.New(),
 		Created: time.Now(),
-		Storage: make(map[string]interface{},0),
+		Storage: make(map[string]interface{}, 0),
 	}
 
 	log.Debugln("Created callback with id", sess.Id.String())
@@ -99,12 +96,10 @@ func NewCallback() *Callback {
 
 }
 
-
-
 func FindCallback(id string) (*Callback, error) {
 
-	if strings.HasPrefix(id, "\"") && strings.HasSuffix(id, "\""){
-		id = id[1:len(id)-1]
+	if strings.HasPrefix(id, "\"") && strings.HasSuffix(id, "\"") {
+		id = id[1 : len(id)-1]
 	}
 
 	if callback, ok := CallbackStorage[id]; ok == true {
@@ -118,7 +113,7 @@ func FindCallback(id string) (*Callback, error) {
 func GCCallback(sleep time.Duration) {
 
 	if CallbackStorage != nil {
-		expiredKeys := make([]string,0)
+		expiredKeys := make([]string, 0)
 		for i := range CallbackStorage {
 			if CallbackStorage[i] == nil {
 				expiredKeys = append(expiredKeys, i)

@@ -6,7 +6,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
-	"net/http"
 	"strings"
 )
 
@@ -15,14 +14,16 @@ type SlackBot struct {
 		signSecret string
 		botToken   string
 		appToken   string
+		useSocket  bool
+		slackDebug bool
 	}
 
 	registeredCommands  map[string]CommandFunc
 	registeredCallbacks map[slack.InteractionType]map[string]InteractionCallbackFunc
 	registeredEvents    map[string]CallbackEventFunc
 
-	Api          *slack.Client
-	socketClient *socketmode.Client
+	api    *slack.Client
+	socket *socketmode.Client
 }
 
 func NewSlackBot(slackSignSecret, slackBotToken, slackAppToken string) *SlackBot {
@@ -31,7 +32,12 @@ func NewSlackBot(slackSignSecret, slackBotToken, slackAppToken string) *SlackBot
 
 	slackBot.config.signSecret = slackSignSecret
 	slackBot.config.botToken = slackBotToken
-	slackBot.config.appToken = slackAppToken
+	if slackAppToken != "" {
+		slackBot.config.appToken = slackAppToken
+		slackBot.config.useSocket = true
+	} else {
+		slackBot.config.useSocket = false
+	}
 
 	slackBot.Setup()
 
@@ -39,20 +45,9 @@ func NewSlackBot(slackSignSecret, slackBotToken, slackAppToken string) *SlackBot
 
 }
 
-func (s *SlackBot) SetHTTPHandleFunctions(http *http.ServeMux) {
-
-	http.HandleFunc("/events", s.DefaultHandler)
-	http.HandleFunc("/slack/events", s.EventsHandler)
-	http.HandleFunc("/slack/load-options", s.DefaultHandler)
-
-	http.HandleFunc("/slack/actions", s.ActionsHandler)
-	http.HandleFunc("/slack/commands", s.CommandsHandler)
-
-}
-
-type CommandFunc func(command slack.SlashCommand) slack.Message
-type InteractionCallbackFunc func(callback slack.InteractionCallback) slack.Message
-type CallbackEventFunc func(event slackevents.EventsAPIEvent)
+type CommandFunc func(command slack.SlashCommand, ctx Context) slack.Message
+type InteractionCallbackFunc func(callback slack.InteractionCallback, ctx Context) slack.Message
+type CallbackEventFunc func(event slackevents.EventsAPIEvent, ctx Context)
 
 func (s *SlackBot) RegisterCommand(command string, handler CommandFunc) error {
 
@@ -109,29 +104,34 @@ func (s *SlackBot) Setup() {
 	s.registeredCallbacks = make(map[slack.InteractionType]map[string]InteractionCallbackFunc)
 	s.registeredEvents = make(map[string]CallbackEventFunc)
 
-	if s.Api == nil && s.config.botToken != "" {
-		s.Api = slack.New(
-			s.config.botToken,
-			slack.OptionDebug(false),
-			slack.OptionAppLevelToken(s.config.appToken),
-		)
-		s.socketClient = socketmode.New(
-			s.Api,
-			socketmode.OptionDebug(false),
-		)
+	apiOptions := []slack.Option{}
+	apiOptions = append(apiOptions, slack.OptionDebug(s.config.slackDebug))
+	if s.config.useSocket {
+		apiOptions = append(apiOptions, slack.OptionAppLevelToken(s.config.appToken))
 	}
 
-	s.StartSocketListener()
-
+	if s.api == nil && s.config.botToken != "" {
+		s.api = slack.New(
+			s.config.botToken,
+			apiOptions...,
+		)
+	}
+	if s.api != nil && s.config.useSocket {
+		s.socket = socketmode.New(
+			s.api,
+			socketmode.OptionDebug(s.config.slackDebug),
+		)
+		s.StartSocketListener()
+	}
 }
 
-func (s *SlackBot) FireCommand(command slack.SlashCommand) slack.Message {
+func (s *SlackBot) FireSlashCommand(command slack.SlashCommand, ctx Context) slack.Message {
 
 	var payload slack.Message
 
 	if commandFunc, ok := s.registeredCommands[command.Command]; ok != false {
 		log.Debugln(command.Command, " found")
-		payload = commandFunc(command)
+		payload = commandFunc(command, ctx)
 	} else {
 		payload.Msg = slack.Msg{Text: fmt.Sprintf("Unknown command: %s %s", command.Command, command.Text)}
 	}
@@ -139,7 +139,7 @@ func (s *SlackBot) FireCommand(command slack.SlashCommand) slack.Message {
 
 }
 
-func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.InteractionCallback) slack.Message {
+func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.InteractionCallback, ctx Context) slack.Message {
 
 	var payload slack.Message
 
@@ -171,7 +171,7 @@ func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.Interaction
 
 		if callbackFunc, ok := callbacks[callbackId]; ok != false {
 			log.Debugf("Callback %s found", callbackId)
-			callbackFunc(interactionCallback)
+			callbackFunc(interactionCallback, ctx)
 		} else {
 			log.Debugf("Callback %s not found", callbackId)
 		}
@@ -192,14 +192,14 @@ func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.Interaction
 
 }
 
-func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent) {
+func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent, ctx Context) {
 
 	innerEvent := eventsAPIEvent.InnerEvent
 
 	eventType := innerEvent.Type
 
 	if eventFunc, ok := s.registeredEvents[eventType]; ok != false {
-		eventFunc(eventsAPIEvent)
+		eventFunc(eventsAPIEvent, ctx)
 	} else {
 		log.Debugf("Event %s not registered", eventType)
 	}

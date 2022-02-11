@@ -10,6 +10,17 @@ import (
 	"net/http"
 )
 
+func (s *SlackBot) SetHTTPHandleFunctions(http *http.ServeMux) {
+
+	http.HandleFunc("/events", s.DefaultHandler)
+	http.HandleFunc("/slack/events", s.EventsHandler)
+	http.HandleFunc("/slack/load-options", s.DefaultHandler)
+
+	http.HandleFunc("/slack/actions", s.ActionsHandler)
+	http.HandleFunc("/slack/commands", s.CommandsHandler)
+
+}
+
 func (s *SlackBot) DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("Got request on: %s", r.RequestURI)
 	w.WriteHeader(http.StatusNotFound)
@@ -58,7 +69,8 @@ func (s *SlackBot) ActionsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Could not parse action response JSON: %v", err)
 	}
 
-	s.FireInteractiveCallback(payload)
+	ctx := s.newHTTPContext(&w, r)
+	s.FireInteractiveCallback(payload, ctx)
 
 	w.WriteHeader(http.StatusInternalServerError)
 
@@ -79,10 +91,12 @@ func (s *SlackBot) CommandsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	ctx := s.newHTTPContext(&w, r)
+	payload := s.FireSlashCommand(command, ctx)
 
-	payload := s.FireCommand(command)
-
-	s.renderJSON(w, r, payload)
+	if !ctx.IsFinished() {
+		s.renderJSON(w, r, payload)
+	}
 
 }
 

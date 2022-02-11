@@ -8,63 +8,70 @@ import (
 )
 
 func (s *SlackBot) SocketListener() {
-	for evt := range s.socketClient.Events {
+	for socketEvent := range s.socket.Events {
 		log.Debugln("Got event")
-		switch evt.Type {
+		socketContext := s.newSocketContext(&socketEvent)
+		var payload interface{}
+		var autoAck bool
+		payload = nil
+		autoAck = true
+
+		switch socketEvent.Type {
 		case socketmode.EventTypeConnecting:
-			log.Traceln("Connecting to Slack with Socket Mode...")
+			log.Traceln("Connecting to Slack with socket Mode...")
 		case socketmode.EventTypeConnectionError:
 			log.Traceln("Connection failed. Retrying later...")
 		case socketmode.EventTypeConnected:
-			log.Traceln("Connected to Slack with Socket Mode.")
+			log.Traceln("Connected to Slack with socket Mode.")
 		case socketmode.EventTypeEventsAPI:
-			eventsAPIEvent, ok := evt.Data.(slackevents.EventsAPIEvent)
+			var eventsAPIEvent slackevents.EventsAPIEvent
+			eventsAPIEvent, ok := socketEvent.Data.(slackevents.EventsAPIEvent)
 			if !ok {
-				log.Warnf("Ignored %+v\n", evt)
 				continue
 			}
 			log.Debugf("Event received: %+v\n", eventsAPIEvent)
 
-			s.socketClient.Ack(*evt.Request)
-
 			switch eventsAPIEvent.Type {
 			case slackevents.CallbackEvent:
-				s.FireCallbackEvent(eventsAPIEvent)
+				s.FireCallbackEvent(eventsAPIEvent, socketContext)
+				autoAck = true
 			case slackevents.URLVerification:
 				log.Warnln("Url Verification event received")
 			case slackevents.AppRateLimited:
 				// AppRateLimited indicates your app's event subscriptions are being rate limited
 				log.Warnln("AppRateLimited event received")
-
 			default:
-				s.socketClient.Debugf("unsupported Events API event received")
+				s.socket.Debugf("unsupported Events API event received")
 			}
+
 		case socketmode.EventTypeInteractive:
-			callback, ok := evt.Data.(slack.InteractionCallback)
+			callback, ok := socketEvent.Data.(slack.InteractionCallback)
 			if !ok {
-				log.Warnf("Ignored %+v\n", evt)
 				continue
 			}
 
-			var payload interface{}
-			payload = s.FireInteractiveCallback(callback)
-			s.socketClient.Ack(*evt.Request, payload)
+			autoAck = true
+			payload = s.FireInteractiveCallback(callback, socketContext)
+
 		case socketmode.EventTypeSlashCommand:
-			cmd, ok := evt.Data.(slack.SlashCommand)
+			cmd, ok := socketEvent.Data.(slack.SlashCommand)
 			if !ok {
-				log.Debugf("Ignored %+v\n", evt)
 				continue
 			}
 
-			var payload slack.Message
-			payload = s.FireCommand(cmd)
-			s.socketClient.Ack(*evt.Request, payload)
+			autoAck = true
+			payload = s.FireSlashCommand(cmd, socketContext)
 
 		case socketmode.EventTypeHello:
-			//s.socketClient.Ack(*evt.Request)
+			//s.socket.Ack(*socketEvent.Request)
 		default:
-			log.Errorf("Unexpected event type received: %s\n", evt.Type)
+			log.Errorf("Unexpected event type received: %s\n", socketEvent.Type)
 		}
+
+		if autoAck && !socketContext.IsFinished() {
+			s.socket.Ack(*socketEvent.Request, payload)
+		}
+
 	}
 
 }
@@ -72,8 +79,8 @@ func (s *SlackBot) SocketListener() {
 func (s *SlackBot) StartSocketListener() {
 	go s.SocketListener()
 
-	if s.socketClient != nil {
-		go s.socketClient.Run()
+	if s.socket != nil {
+		go s.socket.Run()
 	} else {
 		log.Warn("SocketClient is nill")
 	}

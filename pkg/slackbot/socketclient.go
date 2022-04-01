@@ -9,7 +9,7 @@ import (
 
 func (s *SlackBot) SocketListener() {
 	for socketEvent := range s.socket.Events {
-		log.Debugln("Got event")
+		log.Debugln("Got event: ", socketEvent.Type)
 		socketContext := s.newSocketContext(&socketEvent)
 		var payload interface{}
 		var autoAck bool
@@ -19,10 +19,13 @@ func (s *SlackBot) SocketListener() {
 		switch socketEvent.Type {
 		case socketmode.EventTypeConnecting:
 			log.Traceln("Connecting to Slack with socket Mode...")
+			autoAck = false
 		case socketmode.EventTypeConnectionError:
 			log.Traceln("Connection failed. Retrying later...")
+			autoAck = false
 		case socketmode.EventTypeConnected:
 			log.Traceln("Connected to Slack with socket Mode.")
+			autoAck = false
 		case socketmode.EventTypeEventsAPI:
 			var eventsAPIEvent slackevents.EventsAPIEvent
 			eventsAPIEvent, ok := socketEvent.Data.(slackevents.EventsAPIEvent)
@@ -63,26 +66,35 @@ func (s *SlackBot) SocketListener() {
 			payload = s.FireSlashCommand(cmd, socketContext)
 
 		case socketmode.EventTypeHello:
+			autoAck = false
 			//s.socket.Ack(*socketEvent.Request)
 		default:
 			log.Errorf("Unexpected event type received: %s\n", socketEvent.Type)
 		}
 
 		if autoAck && !socketContext.IsFinished() {
-			s.socket.Ack(*socketEvent.Request, payload)
+			s.socket.Ack(
+				*socketEvent.Request,
+				payload,
+			)
 		}
-
 	}
-
 }
 
 func (s *SlackBot) StartSocketListener() {
 	go s.SocketListener()
 
 	if s.socket != nil {
-		go s.socket.Run()
+		go s.RunSocket()
 	} else {
 		log.Warn("SocketClient is nill")
 	}
 
+}
+
+func (s *SlackBot) RunSocket() {
+	err := s.socket.Run()
+	if err != nil {
+		log.Fatalf("Could not connect to socket: %s", err.Error())
+	}
 }

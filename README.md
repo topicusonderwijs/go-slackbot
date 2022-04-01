@@ -1,6 +1,6 @@
 # Go-Slackbot
 
-A go slackbot framework to make implementing a slackbot a bit easier.
+A go slackbot framework to make implementing a slackbot a bit easier and less repetitive.
 
 This framework serves as an extension to `github.com/slack-go/slack`.
 
@@ -14,16 +14,23 @@ go get github.com/topicusonderwijs/go-slackbot
 
 # Examples
 
+See also: [examples](examples)
+
 ```golang
+
+import (
+    "github.com/slack-go/slack/slackevents"
+    "github.com/topicusonderwijs/go-slackbot/pkg/slackbot"
+)
 
 func main() {
 
     http := http.NewServeMux()
     server := &http.Server{Addr: s.config.port, Handler: s.http}
     bot := slackbot.NewSlackBot(
-		"SigningSecret", 
-		"BotToken", 
-		"AppLevelToken",
+        "SigningSecret", 
+        "BotToken", 
+        "AppLevelToken",
     )
     bot.SetHTTPHandleFunctions(s.http)
     bot.RegisterCallbackEvent(slackevents.AppMention, AppMentionEvent)
@@ -33,7 +40,7 @@ func main() {
     if err != nil {
         log.Fatal("Error while serving: %s", err)
     }
-	
+    
 }
 
 func AppMentionEvent(event slackevents.EventsAPIEvent, ctx slackbot.Context) {
@@ -44,11 +51,12 @@ func AppMentionEvent(event slackevents.EventsAPIEvent, ctx slackbot.Context) {
     }
 }
 
-func CommandSilence(command slack.SlashCommand, ctx slackbot.Context) slack.Message {
-	return slack.Message{Msg: slack.Msg{Text: "Oh hi there"}}	
+func CommandHello(command slack.SlashCommand, ctx slackbot.Context) slack.Message {
+    return slack.Message{Msg: slack.Msg{Text: "Oh hi there"}}	
 }
 
 ```
+
 
 # Contribution
 

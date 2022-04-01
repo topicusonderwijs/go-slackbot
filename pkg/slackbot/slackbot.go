@@ -45,9 +45,9 @@ func NewSlackBot(slackSignSecret, slackBotToken, slackAppToken string) *SlackBot
 
 }
 
-type CommandFunc func(command slack.SlashCommand, ctx Context) slack.Message
-type InteractionCallbackFunc func(callback slack.InteractionCallback, ctx Context) slack.Message
-type CallbackEventFunc func(event slackevents.EventsAPIEvent, ctx Context)
+type CommandFunc func(command slack.SlashCommand, ctx *Context) slack.Message
+type InteractionCallbackFunc func(callback slack.InteractionCallback, ctx *Context) slack.Message
+type CallbackEventFunc func(event slackevents.EventsAPIEvent, ctx *Context)
 
 func (s *SlackBot) RegisterCommand(command string, handler CommandFunc) error {
 
@@ -125,7 +125,7 @@ func (s *SlackBot) Setup() {
 	}
 }
 
-func (s *SlackBot) FireSlashCommand(command slack.SlashCommand, ctx Context) slack.Message {
+func (s *SlackBot) FireSlashCommand(command slack.SlashCommand, ctx *Context) slack.Message {
 
 	var payload slack.Message
 
@@ -139,7 +139,7 @@ func (s *SlackBot) FireSlashCommand(command slack.SlashCommand, ctx Context) sla
 
 }
 
-func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.InteractionCallback, ctx Context) slack.Message {
+func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.InteractionCallback, ctx *Context) slack.Message {
 
 	var payload slack.Message
 
@@ -192,7 +192,7 @@ func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.Interaction
 
 }
 
-func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent, ctx Context) {
+func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent, ctx *Context) {
 
 	innerEvent := eventsAPIEvent.InnerEvent
 

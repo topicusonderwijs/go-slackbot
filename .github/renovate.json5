@@ -1,0 +1,8 @@
+{
+  extends: [
+    "local>topicusonderwijs/renovate-config:default.json5",
+    "local>topicusonderwijs/renovate-config:go.json5"
+  ],
+  assigneesFromCodeOwners: true,
+  reviewersFromCodeOwners: true
+}

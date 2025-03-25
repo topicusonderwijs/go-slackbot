@@ -79,13 +79,13 @@ func NewCallback() *Callback {
 
 	if CallbackStorage == nil {
 		log.Debugln("Creating Storage")
-		CallbackStorage = make(map[string]*Callback, 0)
+		CallbackStorage = make(map[string]*Callback)
 	}
 
 	sess := Callback{
 		Id:      uuid.New(),
 		Created: time.Now(),
-		Storage: make(map[string]interface{}, 0),
+		Storage: make(map[string]interface{}),
 	}
 
 	log.Debugln("Created callback with id", sess.Id.String())

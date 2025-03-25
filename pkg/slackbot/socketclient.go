@@ -70,6 +70,7 @@ func (s *SlackBot) SocketListener() {
 			//s.socket.Ack(*socketEvent.Request)
 		default:
 			log.Errorf("Unexpected event type received: %s\n", socketEvent.Type)
+			autoAck = false
 		}
 
 		if autoAck && !socketContext.IsFinished() {

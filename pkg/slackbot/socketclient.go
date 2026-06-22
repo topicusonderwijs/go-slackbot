@@ -1,6 +1,7 @@
 package slackbot
 
 import (
+	"fmt"
 	"github.com/humsie/log"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -82,20 +83,21 @@ func (s *SlackBot) SocketListener() {
 	}
 }
 
-func (s *SlackBot) StartSocketListener() {
+// RunSocket starts the socket-mode event listener and blocks while the socket
+// connection runs. It returns the error from the underlying socket so the
+// caller decides how to handle a failure. Run it in socket mode after
+// registering handlers:
+//
+//	bot := slackbot.NewSlackBot(sign, bot, app)
+//	if err := bot.RunSocket(); err != nil {
+//		log.Fatal(err)
+//	}
+func (s *SlackBot) RunSocket() error {
+	if s.socket == nil {
+		return fmt.Errorf("socket mode not enabled: no app-level token provided")
+	}
+
 	go s.SocketListener()
 
-	if s.socket != nil {
-		go s.RunSocket()
-	} else {
-		log.Warn("SocketClient is nill")
-	}
-
-}
-
-func (s *SlackBot) RunSocket() {
-	err := s.socket.Run()
-	if err != nil {
-		log.Fatalf("Could not connect to socket: %s", err.Error())
-	}
+	return s.socket.Run()
 }

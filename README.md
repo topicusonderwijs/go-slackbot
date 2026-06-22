@@ -34,7 +34,7 @@ func main() {
     bot := slackbot.NewSlackBot(
         "SigningSecret",
         "BotToken",
-        "AppLevelToken",
+        "", // pass an app-level token to use socket mode instead
     )
     bot.SetHTTPHandleFunctions(mux)
     bot.RegisterCallbackEvent(slackevents.AppMention, AppMentionEvent)
@@ -59,6 +59,24 @@ func CommandHello(command slack.SlashCommand, ctx *slackbot.Context) slack.Messa
     return slack.Message{Msg: slack.Msg{Text: "Oh hi there"}}
 }
 
+```
+
+## Transports
+
+The bot supports two transports; you own the lifecycle in both cases:
+
+- **HTTP / Events API** — pass an empty app-level token, wire the routes with
+  `bot.SetHTTPHandleFunctions(mux)` and run your own `http.Server`.
+- **Socket Mode** — pass a non-empty app-level token and start the (blocking)
+  listener yourself after registering handlers:
+
+```golang
+    bot := slackbot.NewSlackBot("SigningSecret", "BotToken", "AppLevelToken")
+    bot.RegisterCommand("/hello", CommandHello)
+
+    if err := bot.RunSocket(); err != nil {
+        log.Fatal(err)
+    }
 ```
 
 

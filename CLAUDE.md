@@ -19,7 +19,7 @@ gofmt -l .            # check formatting
 
 The package `pkg/slackbot` supports **two transports for the same handler logic**, selected at construction:
 
-- **Socket Mode** — enabled automatically when `NewSlackBot(...)` is given a non-empty `appToken`. `Setup()` then starts a background goroutine (`StartSocketListener` → `SocketListener`) reading `socket.Events`.
+- **Socket Mode** — enabled when `NewSlackBot(...)` is given a non-empty `appToken`. `Setup()` creates the `socketmode.Client` but does **not** start it; the consumer calls the blocking `RunSocket() error` (which spawns `SocketListener` and runs `socket.Run()`) and decides how to handle a failure.
 - **HTTP / Events API** — used when no `appToken` is given. The consumer wires routes via `SetHTTPHandleFunctions(mux)` and runs their own `http.Server`. Routes: `/slack/events`, `/slack/actions`, `/slack/commands`.
 
 Both transports converge on three central dispatchers in `slackbot.go`: `FireSlashCommand`, `FireInteractiveCallback`, `FireCallbackEvent`. These look up the matching handler in the registration maps (`registeredCommands`, `registeredCallbacks`, `registeredEvents`) and invoke it. Adding new behavior means registering a handler — the transport wiring is already shared.

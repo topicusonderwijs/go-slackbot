@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/humsie/log"
 	"github.com/slack-go/slack"
@@ -10,12 +11,13 @@ import (
 	"time"
 )
 
+var useSocket = flag.Bool("socket", false, "use socket mode instead of HTTP")
+
 func main() {
 
+	flag.Parse()
 	log.EnableLevel("debug")
 
-	mux := http.NewServeMux()
-	server := &http.Server{Addr: ":8080", Handler: mux}
 	bot := slackbot.NewSlackBot(
 		"SigningSecret",
 		"BotToken",
@@ -24,14 +26,21 @@ func main() {
 	// Start GC to delete old callbacks that are created more that an hour ago.
 	go slackbot.GCCallback(15 * time.Minute)
 
-	bot.SetHTTPHandleFunctions(mux)
 	bot.RegisterCallbackEvent(slackevents.AppMention, AppMentionEvent)
-
 	bot.RegisterInteractionCallback(slack.InteractionTypeBlockActions, "page_back", ActionShowPrev)
 	bot.RegisterInteractionCallback(slack.InteractionTypeBlockActions, "page_forward", ActionShowNext)
 
-	err := server.ListenAndServe()
-	if err != nil {
+	if *useSocket {
+		if err := bot.RunSocket(); err != nil {
+			log.Fatalf("Socket mode stopped: %s", err)
+		}
+		return
+	}
+
+	mux := http.NewServeMux()
+	server := &http.Server{Addr: ":8080", Handler: mux}
+	bot.SetHTTPHandleFunctions(mux)
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Error while serving: %s", err)
 	}
 

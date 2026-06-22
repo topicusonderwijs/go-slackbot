@@ -121,7 +121,6 @@ func (s *SlackBot) Setup() {
 			s.api,
 			socketmode.OptionDebug(s.config.slackDebug),
 		)
-		s.StartSocketListener()
 	}
 }
 

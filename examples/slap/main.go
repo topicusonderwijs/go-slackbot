@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/humsie/log"
 	"github.com/slack-go/slack"
@@ -9,24 +10,33 @@ import (
 	"net/http"
 )
 
+var useSocket = flag.Bool("socket", false, "use socket mode instead of HTTP")
+
 func main() {
 
+	flag.Parse()
 	log.EnableLevel("debug")
 
-	mux := http.NewServeMux()
-	server := &http.Server{Addr: ":8080", Handler: mux}
 	bot := slackbot.NewSlackBot(
 		"SigningSecret",
 		"BotToken",
 		"AppLevelToken",
 	)
-	bot.SetHTTPHandleFunctions(mux)
 	bot.RegisterCallbackEvent(slackevents.AppMention, AppMentionEvent)
 	bot.RegisterCommand("/hello", CommandHello)
 	bot.RegisterCommand("/slap", CommandSlap)
 
-	err := server.ListenAndServe()
-	if err != nil {
+	if *useSocket {
+		if err := bot.RunSocket(); err != nil {
+			log.Fatalf("Socket mode stopped: %s", err)
+		}
+		return
+	}
+
+	mux := http.NewServeMux()
+	server := &http.Server{Addr: ":8080", Handler: mux}
+	bot.SetHTTPHandleFunctions(mux)
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Error while serving: %s", err)
 	}
 
@@ -47,7 +57,11 @@ func CommandHello(command slack.SlashCommand, ctx *slackbot.Context) (payload sl
 	return
 }
 func CommandSlap(command slack.SlashCommand, ctx *slackbot.Context) (payload slack.Message) {
-	ctx.Ack(*ctx.Event.Request)
+	// ctx.Event is only set in socket mode; acking early avoids the framework
+	// rendering an (empty) HTTP response.
+	if ctx.IsSocket() {
+		ctx.Ack(*ctx.Event.Request)
+	}
 	// Warning command.Text is returned unfiltered and unescaped and could result in unsafe/unexpected behavior.
 	ctx.Api.SendMessage(command.ChannelID, slack.MsgOptionText(fmt.Sprintf("*%s* wants to slap *%s* a bit around with a big large trout", command.UserName, command.Text), false))
 	return

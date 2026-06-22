@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"github.com/humsie/log"
 	"github.com/slack-go/slack"
-	"io/ioutil"
+	"github.com/slack-go/slack/slackevents"
+	"io"
 	"net/http"
 )
 
@@ -34,13 +35,13 @@ func (s *SlackBot) VerifySignature(w http.ResponseWriter, r *http.Request) (err 
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return
 	}
 
 	// restore content back into r.Body
-	r.Body = ioutil.NopCloser(bytes.NewReader(body))
+	r.Body = io.NopCloser(bytes.NewReader(body))
 
 	if _, err = verifier.Write(body); err != nil {
 		return
@@ -69,10 +70,12 @@ func (s *SlackBot) ActionsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Could not parse action response JSON: %v", err)
 	}
 
-	ctx := s.newHTTPContext(&w, r)
-	s.FireInteractiveCallback(payload, ctx)
+	ctx := s.newHTTPContext(w, r)
+	response := s.FireInteractiveCallback(payload, ctx)
 
-	w.WriteHeader(http.StatusInternalServerError)
+	if !ctx.IsFinished() {
+		s.renderJSON(w, r, response)
+	}
 
 }
 
@@ -91,7 +94,7 @@ func (s *SlackBot) CommandsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	ctx := s.newHTTPContext(&w, r)
+	ctx := s.newHTTPContext(w, r)
 	payload := s.FireSlashCommand(command, ctx)
 
 	if !ctx.IsFinished() {
@@ -108,24 +111,39 @@ func (s *SlackBot) EventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload map[string]interface{}
-
-	jsondec := json.NewDecoder(r.Body)
-	err := jsondec.Decode(&payload)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Printf("Could not parse action response JSON: %v", err)
-	}
-
-	switch payload["type"] {
-	case "url_verification":
-		w.WriteHeader(200)
-		w.Write([]byte(payload["challenge"].(string)))
+		log.Errorf("Could not read event body: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
-	default:
-		log.Debugln("Got a event of type: ", payload["type"].(string))
 	}
 
-	w.WriteHeader(401)
+	// The signature is already verified in VerifySignature.
+	eventsAPIEvent, err := slackevents.ParseEvent(json.RawMessage(body), slackevents.OptionNoVerifyToken())
+	if err != nil {
+		log.Errorf("Could not parse event: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	switch eventsAPIEvent.Type {
+	case slackevents.URLVerification:
+		var res *slackevents.ChallengeResponse
+		if err := json.Unmarshal(body, &res); err != nil {
+			log.Errorf("Could not parse challenge: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(res.Challenge))
+	case slackevents.CallbackEvent:
+		ctx := s.newHTTPContext(w, r)
+		s.FireCallbackEvent(eventsAPIEvent, ctx)
+		w.WriteHeader(http.StatusOK)
+	default:
+		log.Debugln("Unhandled event type: ", eventsAPIEvent.Type)
+		w.WriteHeader(http.StatusOK)
+	}
 
 }
 
@@ -143,19 +161,5 @@ func (s *SlackBot) renderJSON(w http.ResponseWriter, r *http.Request, object int
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
-
-}
-
-func (s *SlackBot) renderError(w http.ResponseWriter, r *http.Request, err error) {
-	b := []byte(fmt.Sprintf("There was an error: %s", err))
-
-	debug := true
-
-	if debug == false {
-		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write(b)
-	}
 
 }

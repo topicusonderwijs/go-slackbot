@@ -51,12 +51,12 @@ type CallbackEventFunc func(event slackevents.EventsAPIEvent, ctx *Context)
 
 func (s *SlackBot) RegisterCommand(command string, handler CommandFunc) error {
 
-	if strings.HasPrefix(command, "/") == false {
+	if !strings.HasPrefix(command, "/") {
 		return fmt.Errorf("command should start with a /")
 	}
 
-	if _, ok := s.registeredCommands[command]; ok != false {
-		return fmt.Errorf("command '%s' allready registered", command)
+	if _, ok := s.registeredCommands[command]; ok {
+		return fmt.Errorf("command '%s' already registered", command)
 	}
 
 	log.Debugf("Registering command: %s", command)
@@ -68,11 +68,11 @@ func (s *SlackBot) RegisterCommand(command string, handler CommandFunc) error {
 
 func (s *SlackBot) RegisterInteractionCallback(interactionType slack.InteractionType, callbackId string, handler InteractionCallbackFunc) error {
 
-	if _, ok := s.registeredCallbacks[interactionType][callbackId]; ok != false {
-		return fmt.Errorf("%s Callback '%s' allready registered", interactionType, callbackId)
+	if _, ok := s.registeredCallbacks[interactionType][callbackId]; ok {
+		return fmt.Errorf("%s Callback '%s' already registered", interactionType, callbackId)
 	}
 
-	if _, ok := s.registeredCallbacks[interactionType]; ok == false {
+	if _, ok := s.registeredCallbacks[interactionType]; !ok {
 		s.registeredCallbacks[interactionType] = make(map[string]InteractionCallbackFunc)
 	}
 
@@ -85,8 +85,8 @@ func (s *SlackBot) RegisterInteractionCallback(interactionType slack.Interaction
 
 func (s *SlackBot) RegisterCallbackEvent(event slackevents.EventsAPIType, handler CallbackEventFunc) error {
 
-	if _, ok := s.registeredEvents[event]; ok != false {
-		return fmt.Errorf("event '%s' allready registered", event)
+	if _, ok := s.registeredEvents[event]; ok {
+		return fmt.Errorf("event '%s' already registered", event)
 	}
 
 	log.Debugf("Registering event: %s", event)
@@ -129,7 +129,7 @@ func (s *SlackBot) FireSlashCommand(command slack.SlashCommand, ctx *Context) sl
 
 	var payload slack.Message
 
-	if commandFunc, ok := s.registeredCommands[command.Command]; ok != false {
+	if commandFunc, ok := s.registeredCommands[command.Command]; ok {
 		log.Debugln(command.Command, " found")
 		payload = commandFunc(command, ctx)
 	} else {
@@ -167,11 +167,11 @@ func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.Interaction
 
 	}
 
-	if callbacks, ok := s.registeredCallbacks[interactionCallback.Type]; ok != false {
+	if callbacks, ok := s.registeredCallbacks[interactionCallback.Type]; ok {
 
-		if callbackFunc, ok := callbacks[callbackId]; ok != false {
+		if callbackFunc, ok := callbacks[callbackId]; ok {
 			log.Debugf("Callback %s found", callbackId)
-			callbackFunc(interactionCallback, ctx)
+			payload = callbackFunc(interactionCallback, ctx)
 		} else {
 			log.Debugf("Callback %s not found", callbackId)
 		}
@@ -198,7 +198,7 @@ func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent, 
 
 	eventType := slackevents.EventsAPIType(innerEvent.Type)
 
-	if eventFunc, ok := s.registeredEvents[eventType]; ok != false {
+	if eventFunc, ok := s.registeredEvents[eventType]; ok {
 		eventFunc(eventsAPIEvent, ctx)
 	} else {
 		log.Debugf("Event %s not registered", eventType)

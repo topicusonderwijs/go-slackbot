@@ -16,7 +16,7 @@ type Context struct {
 	Api                *slack.Client
 	isFinished         bool
 	HTTPRequest        *http.Request
-	HTTPResponseWriter *http.ResponseWriter
+	HTTPResponseWriter http.ResponseWriter
 	Socket             *socketmode.Client
 	Event              *socketmode.Event
 }
@@ -40,7 +40,7 @@ func (c *Context) Ack(req socketmode.Request, payload ...interface{}) {
 	c.Socket.Ack(req, payload...)
 }
 
-func (s *SlackBot) newHTTPContext(w *http.ResponseWriter, r *http.Request) (context *Context) {
+func (s *SlackBot) newHTTPContext(w http.ResponseWriter, r *http.Request) (context *Context) {
 	context = &Context{}
 	context.Type = SLACK_CONTEXT_HTTP
 	context.Api = s.api

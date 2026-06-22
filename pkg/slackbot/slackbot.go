@@ -20,7 +20,7 @@ type SlackBot struct {
 
 	registeredCommands  map[string]CommandFunc
 	registeredCallbacks map[slack.InteractionType]map[string]InteractionCallbackFunc
-	registeredEvents    map[string]CallbackEventFunc
+	registeredEvents    map[slackevents.EventsAPIType]CallbackEventFunc
 
 	api    *slack.Client
 	socket *socketmode.Client
@@ -83,7 +83,7 @@ func (s *SlackBot) RegisterInteractionCallback(interactionType slack.Interaction
 
 }
 
-func (s *SlackBot) RegisterCallbackEvent(event string, handler CallbackEventFunc) error {
+func (s *SlackBot) RegisterCallbackEvent(event slackevents.EventsAPIType, handler CallbackEventFunc) error {
 
 	if _, ok := s.registeredEvents[event]; ok != false {
 		return fmt.Errorf("event '%s' allready registered", event)
@@ -102,7 +102,7 @@ func (s *SlackBot) Setup() {
 
 	s.registeredCommands = make(map[string]CommandFunc)
 	s.registeredCallbacks = make(map[slack.InteractionType]map[string]InteractionCallbackFunc)
-	s.registeredEvents = make(map[string]CallbackEventFunc)
+	s.registeredEvents = make(map[slackevents.EventsAPIType]CallbackEventFunc)
 
 	apiOptions := []slack.Option{}
 	apiOptions = append(apiOptions, slack.OptionDebug(s.config.slackDebug))
@@ -196,7 +196,7 @@ func (s *SlackBot) FireCallbackEvent(eventsAPIEvent slackevents.EventsAPIEvent, 
 
 	innerEvent := eventsAPIEvent.InnerEvent
 
-	eventType := innerEvent.Type
+	eventType := slackevents.EventsAPIType(innerEvent.Type)
 
 	if eventFunc, ok := s.registeredEvents[eventType]; ok != false {
 		eventFunc(eventsAPIEvent, ctx)

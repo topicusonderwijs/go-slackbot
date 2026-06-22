@@ -19,31 +19,35 @@ See also: [examples](examples)
 ```golang
 
 import (
+    "fmt"
+    "net/http"
+
+    "github.com/slack-go/slack"
     "github.com/slack-go/slack/slackevents"
     "github.com/topicusonderwijs/go-slackbot/pkg/slackbot"
 )
 
 func main() {
 
-    http := http.NewServeMux()
-    server := &http.Server{Addr: s.config.port, Handler: s.http}
+    mux := http.NewServeMux()
+    server := &http.Server{Addr: ":8080", Handler: mux}
     bot := slackbot.NewSlackBot(
-        "SigningSecret", 
-        "BotToken", 
+        "SigningSecret",
+        "BotToken",
         "AppLevelToken",
     )
-    bot.SetHTTPHandleFunctions(s.http)
+    bot.SetHTTPHandleFunctions(mux)
     bot.RegisterCallbackEvent(slackevents.AppMention, AppMentionEvent)
     bot.RegisterCommand("/hello", CommandHello)
 
-    err := bot.ListenAndServe()
+    err := server.ListenAndServe()
     if err != nil {
-        log.Fatal("Error while serving: %s", err)
+        log.Fatalf("Error while serving: %s", err)
     }
-    
+
 }
 
-func AppMentionEvent(event slackevents.EventsAPIEvent, ctx slackbot.Context) {
+func AppMentionEvent(event slackevents.EventsAPIEvent, ctx *slackbot.Context) {
     ev := event.InnerEvent.Data.(*slackevents.AppMentionEvent)
     _, _, err := ctx.Api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false))
     if err != nil {
@@ -51,8 +55,8 @@ func AppMentionEvent(event slackevents.EventsAPIEvent, ctx slackbot.Context) {
     }
 }
 
-func CommandHello(command slack.SlashCommand, ctx slackbot.Context) slack.Message {
-    return slack.Message{Msg: slack.Msg{Text: "Oh hi there"}}	
+func CommandHello(command slack.SlashCommand, ctx *slackbot.Context) slack.Message {
+    return slack.Message{Msg: slack.Msg{Text: "Oh hi there"}}
 }
 
 ```

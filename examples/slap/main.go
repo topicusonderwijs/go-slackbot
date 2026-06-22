@@ -27,7 +27,7 @@ func main() {
 
 	err := server.ListenAndServe()
 	if err != nil {
-		log.Fatal("Error while serving: %s", err)
+		log.Fatalf("Error while serving: %s", err)
 	}
 
 }

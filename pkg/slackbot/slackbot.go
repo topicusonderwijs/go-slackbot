@@ -153,9 +153,16 @@ func (s *SlackBot) FireInteractiveCallback(interactionCallback slack.Interaction
 
 		if len(interactionCallback.ActionCallback.BlockActions) > 0 {
 			log.Debugln("BlockActions")
-			callbackId = interactionCallback.ActionCallback.BlockActions[0].Value
+			action := interactionCallback.ActionCallback.BlockActions[0]
+			callbackId = action.Value
 			if callbackId == "" {
-				callbackId = interactionCallback.ActionCallback.BlockActions[0].SelectedOption.Value
+				// Prefer a handler registered on the action_id (one handler for the whole
+				// select); fall back to the selected option's value (per-value handlers).
+				if _, ok := s.registeredCallbacks[interactionCallback.Type][action.ActionID]; ok {
+					callbackId = action.ActionID
+				} else {
+					callbackId = action.SelectedOption.Value
+				}
 			}
 		}
 

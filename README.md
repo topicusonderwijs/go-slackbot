@@ -80,6 +80,29 @@ The bot supports two transports; you own the lifecycle in both cases:
 ```
 
 
+## Interaction callbacks
+
+`block_actions` interactions are dispatched on the first block action. Buttons route
+by the `Value` you set on the element:
+
+```golang
+    bot.RegisterInteractionCallback(slack.InteractionTypeBlockActions, "confirm", handleConfirm)
+```
+
+For a `static_select` you can register either style:
+
+- **Per-value** — one handler per option value (routes by `SelectedOption.Value`).
+- **Single handler per select** — register under the select's `action_id`; the handler
+  fires for every selection and reads the chosen value from
+  `callback.ActionCallback.BlockActions[0].SelectedOption.Value`:
+
+```golang
+    bot.RegisterInteractionCallback(slack.InteractionTypeBlockActions, "businessline", handleCascade)
+```
+
+When the block action has an empty `Value`, dispatch prefers a handler registered on the
+`action_id` and otherwise falls back to `SelectedOption.Value`, so both styles keep working.
+
 # Contribution
 
 Fork, edit, open a PR and we will see where we go from there 

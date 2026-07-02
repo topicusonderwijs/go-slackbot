@@ -30,7 +30,7 @@ Every handler receives a `*Context` abstracting whether the call arrived over HT
 - `ctx.Ack(req, payload...)` acks a socket request and marks finished.
 
 ### Interaction callback routing (`FireInteractiveCallback`)
-Callback ID resolution is type-dependent and non-obvious: for `ViewSubmission` it uses `View.CallbackID`; for `BlockActions` it derives the key from the first block action's `Value` (falling back to `SelectedOption.Value`) or attachment action value. Register block-action handlers under the value you set on the block element, not a literal callback ID.
+Callback ID resolution is type-dependent and non-obvious: for `ViewSubmission` it uses `View.CallbackID`; for `BlockActions` it derives the key from the first block action's `Value`. When that `Value` is empty, dispatch prefers a handler registered on the action's `action_id` (a single handler for the whole select) and otherwise falls back to `SelectedOption.Value` (per-value handlers). Attachment actions use the attachment action value. Both registration styles are supported: register under the value you set on a block element (e.g. a button), or under an `action_id` to receive every selection of a `static_select` in one handler that reads `SelectedOption.Value` itself.
 
 ### Callback storage (`callback.go`)
 `Callback` is an in-memory key/value store keyed by UUID for carrying state across an interaction (e.g. between a command and a later block action). `NewCallback()` / `AddUUID()` register into the package-global `CallbackStorage`; `FindCallback(id)` retrieves (and strips surrounding quotes from the id). `GCCallback(sleep)` is the expiry sweep — call it in a loop to drop entries older than 1 hour. Note this state is process-local and not concurrency-guarded.

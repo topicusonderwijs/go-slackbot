@@ -6,9 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+
+## [0.4.0] - 2026-07-02
+### Added
+- `block_actions` can be dispatched by `action_id` (single handler per select), falling back to the selected option value for backwards compatibility.
 - Example `-socket` flag to run the slap/interactive examples in either HTTP or socket mode.
 ### Changed
-- Upgraded to Go 1.26 and `slack-go/slack` v0.26.0.
+- Upgraded to Go 1.26 and `slack-go/slack` v0.27.0.
 - **Breaking Change**: `RegisterCallbackEvent` now takes a `slackevents.EventsAPIType` instead of a `string`.
 - **Breaking Change**: `NewSlackBot` no longer starts socket mode automatically. Call the blocking `RunSocket()` yourself after registering handlers.
 - **Breaking Change**: `RunSocket` now returns an `error` instead of calling `log.Fatalf`, so the caller decides how to handle a socket failure.

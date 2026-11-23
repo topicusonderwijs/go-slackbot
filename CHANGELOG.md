@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 ### Changed
+- Upgraded `slack-go/slack` from v0.27.0 to v0.36.0. No API changes in this package; consumers inherit
+  slack-go's own breaking changes (v0.30.0, v0.31.0, v0.32.0, v0.34.0, v0.36.0), such as typed rich-text
+  elements that used to decode as `*RichTextSectionUnknownElement` and stricter request-signature validation.
 ### Deprecated
 ### Removed
 ### Fixed
